@@ -1,13 +1,13 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from google.cloud import storage
+import boto3
 import joblib
 import os
 
 app = FastAPI()
 
-GCS_BUCKET = os.environ.get("GCS_BUCKET", "dummy-bucket")
-GCS_MODEL_KEY = "models/latest/model.pkl"
+AWS_S3_BUCKET = os.environ.get("AWS_S3_BUCKET", "dummy-bucket")
+S3_MODEL_KEY = "models/latest/model.pkl"
 MODEL_PATH = os.path.expanduser("~/models/model.pkl")
 
 # Cho phep chay cuc bo test
@@ -19,23 +19,21 @@ if not os.path.exists(MODEL_PATH):
 
 def download_model():
     """
-    Tai file model.pkl tu GCS ve may khi server khoi dong.
+    Tai file model.pkl tu AWS S3 ve may khi server khoi dong.
 
     Ham nay duoc goi mot lan khi module duoc import. Su dung
-    GOOGLE_APPLICATION_CREDENTIALS de xac thuc (duoc dat trong systemd service).
+    AWS_ACCESS_KEY_ID va AWS_SECRET_ACCESS_KEY de xac thuc (duoc dat trong systemd service).
     """
-    if "GOOGLE_APPLICATION_CREDENTIALS" not in os.environ:
-        print("Bo qua download_model do khong co credentials.")
+    if "AWS_ACCESS_KEY_ID" not in os.environ:
+        print("Bo qua download_model do khong co AWS credentials.")
         return
 
     try:
-        client = storage.Client()
-        bucket = client.bucket(GCS_BUCKET)
-        blob   = bucket.blob(GCS_MODEL_KEY)
-        blob.download_to_filename(MODEL_PATH)
-        print("Model da duoc tai xuong tu GCS.")
+        s3_client = boto3.client('s3')
+        s3_client.download_file(AWS_S3_BUCKET, S3_MODEL_KEY, MODEL_PATH)
+        print("Model da duoc tai xuong tu S3.")
     except Exception as e:
-        print(f"Loi tai model tu GCS: {e}")
+        print(f"Loi tai model tu S3: {e}")
 
 download_model()
 try:
